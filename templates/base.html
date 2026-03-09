@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ACEest Fitness &amp; Gym</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: #1a1a1a;
+            color: #e0e0e0;
+            min-height: 100vh;
+        }
+        header {
+            background: linear-gradient(135deg, #d4af37, #b8962e);
+            color: #000;
+            padding: 18px 32px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        header h1 { font-size: 1.6rem; font-weight: 700; letter-spacing: 1px; }
+        header nav a {
+            color: #1a1a1a;
+            text-decoration: none;
+            font-weight: 600;
+            margin-left: 20px;
+            padding: 6px 14px;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+        header nav a:hover { background: rgba(0,0,0,0.12); }
+        .container { max-width: 1200px; margin: 0 auto; padding: 24px 16px; }
+        .flash { padding: 10px 16px; border-radius: 6px; margin-bottom: 16px; font-size: 0.95rem; }
+        .flash.success { background: #2ecc7133; border: 1px solid #2ecc71; color: #2ecc71; }
+        .flash.error { background: #e74c3c33; border: 1px solid #e74c3c; color: #e74c3c; }
+        .card {
+            background: #242424;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid #333;
+        }
+        .card h2, .card h3 { color: #d4af37; margin-bottom: 12px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+        th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #333; }
+        th { color: #d4af37; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; }
+        tr:hover { background: #2a2a2a; }
+        .btn {
+            display: inline-block;
+            padding: 8px 18px;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            transition: opacity 0.2s;
+        }
+        .btn:hover { opacity: 0.85; }
+        .btn-gold { background: #d4af37; color: #000; }
+        .btn-green { background: #2ecc71; color: #000; }
+        .btn-red { background: #e74c3c; color: #fff; }
+        .btn-blue { background: #3498db; color: #fff; }
+        .btn-sm { padding: 5px 12px; font-size: 0.82rem; }
+        input, select, textarea {
+            background: #333;
+            color: #fff;
+            border: 1px solid #444;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            width: 100%;
+        }
+        input:focus, select:focus, textarea:focus { outline: none; border-color: #d4af37; }
+        label { display: block; margin-bottom: 4px; font-size: 0.85rem; color: #aaa; margin-top: 10px; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+        .badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.78rem;
+            font-weight: 600;
+        }
+        .badge-gold { background: #d4af3733; color: #d4af37; }
+        .badge-green { background: #2ecc7133; color: #2ecc71; }
+        .badge-red { background: #e74c3c33; color: #e74c3c; }
+        .badge-blue { background: #3498db33; color: #3498db; }
+        .stat-box {
+            text-align: center;
+            padding: 16px;
+            background: #2a2a2a;
+            border-radius: 8px;
+        }
+        .stat-box .value { font-size: 1.8rem; font-weight: 700; color: #d4af37; }
+        .stat-box .label { font-size: 0.8rem; color: #888; margin-top: 4px; }
+        footer {
+            text-align: center;
+            padding: 16px;
+            color: #555;
+            font-size: 0.8rem;
+            border-top: 1px solid #2a2a2a;
+            margin-top: 32px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>ACEest FUNCTIONAL FITNESS</h1>
+        <nav>
+            <a href="{{ url_for('index') }}">Dashboard</a>
+            <a href="{{ url_for('health') }}">Health Check</a>
+        </nav>
+    </header>
+
+    <div class="container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% for category, message in messages %}
+                <div class="flash {{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </div>
+
+    <footer>ACEest Fitness &amp; Gym &copy; 2026 | DevOps CI/CD Pipeline Demo</footer>
+</body>
+</html>
