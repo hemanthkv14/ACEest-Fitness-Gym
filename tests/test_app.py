@@ -146,7 +146,7 @@ class TestIndexPage:
 class TestAddClient:
     def test_add_client_success(self, client):
         response = client.post("/client/add", data={
-            "name": "Ravi Kumar",
+            "name": "Hemanth Kumar",
             "age": 25,
             "height": 175,
             "weight": 70,
