@@ -1,0 +1,12 @@
+__pycache__
+*.pyc
+*.pyo
+.git
+.github
+.pytest_cache
+*.db
+*.egg-info
+.env
+venv
+Jenkinsfile
+README.md

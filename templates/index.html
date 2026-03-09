@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="grid-2" style="grid-template-columns: 1fr 2fr;">
+    <!-- Add Client Form -->
+    <div class="card">
+        <h2>Add New Client</h2>
+        <form method="POST" action="{{ url_for('add_client') }}">
+            <label for="name">Full Name *</label>
+            <input type="text" id="name" name="name" required placeholder="e.g. Ravi Kumar">
+
+            <label for="age">Age</label>
+            <input type="number" id="age" name="age" min="10" max="100" placeholder="25">
+
+            <label for="height">Height (cm)</label>
+            <input type="number" id="height" name="height" step="0.1" min="100" max="250" placeholder="175">
+
+            <label for="weight">Weight (kg)</label>
+            <input type="number" id="weight" name="weight" step="0.1" min="30" max="300" placeholder="70">
+
+            <label for="program">Fitness Program</label>
+            <select id="program" name="program">
+                <option value="">-- Select Program --</option>
+                {% for pname in programs %}
+                <option value="{{ pname }}">{{ pname }}</option>
+                {% endfor %}
+            </select>
+
+            <label for="target_weight">Target Weight (kg)</label>
+            <input type="number" id="target_weight" name="target_weight" step="0.1" placeholder="65">
+
+            <label for="target_adherence">Target Adherence (%)</label>
+            <input type="number" id="target_adherence" name="target_adherence" min="0" max="100" placeholder="80">
+
+            <br><br>
+            <button type="submit" class="btn btn-gold" style="width:100%;">Add Client</button>
+        </form>
+    </div>
+
+    <!-- Client List -->
+    <div class="card">
+        <h2>Client Dashboard</h2>
+
+        {% if clients %}
+        <div class="grid-3" style="margin-bottom: 20px;">
+            <div class="stat-box">
+                <div class="value">{{ clients | length }}</div>
+                <div class="label">Total Clients</div>
+            </div>
+            <div class="stat-box">
+                <div class="value">{{ clients | selectattr('program') | list | length }}</div>
+                <div class="label">Active Programs</div>
+            </div>
+            <div class="stat-box">
+                <div class="value">150</div>
+                <div class="label">Gym Capacity</div>
+            </div>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Age</th>
+                    <th>Weight</th>
+                    <th>Program</th>
+                    <th>Calories</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for client in clients %}
+                <tr>
+                    <td><strong>{{ client['name'] }}</strong></td>
+                    <td>{{ client['age'] or '-' }}</td>
+                    <td>{{ client['weight'] or '-' }} kg</td>
+                    <td>
+                        {% if client['program'] %}
+                        <span class="badge badge-gold">{{ client['program'] }}</span>
+                        {% else %}
+                        <span class="badge badge-red">No Program</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ client['calories'] or '-' }} kcal</td>
+                    <td>
+                        <a href="{{ url_for('client_detail', client_id=client['id']) }}" class="btn btn-blue btn-sm">View</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p style="color: #888; text-align: center; padding: 40px;">
+            No clients yet. Add your first client to get started.
+        </p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Programs Overview -->
+<div class="card">
+    <h2>Available Fitness Programs</h2>
+    <div class="grid-2" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));">
+        {% for pname, pdata in programs.items() %}
+        <div style="background: #2a2a2a; border-radius: 8px; padding: 16px; border-left: 3px solid #d4af37;">
+            <h3 style="color: #d4af37; font-size: 1rem;">{{ pname }}</h3>
+            <p style="color: #888; font-size: 0.85rem; margin-bottom: 8px;">{{ pdata['desc'] }}</p>
+            <p style="font-size: 0.82rem;"><strong>Calorie Factor:</strong> {{ pdata['factor'] }} x bodyweight</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+{% endblock %}

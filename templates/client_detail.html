@@ -1,0 +1,248 @@
+{% extends "base.html" %}
+{% block content %}
+
+<a href="{{ url_for('index') }}" class="btn btn-sm" style="color: #d4af37; margin-bottom: 16px;">&larr; Back to Dashboard</a>
+
+<!-- Client Header -->
+<div class="card" style="display: flex; justify-content: space-between; align-items: center;">
+    <div>
+        <h2 style="margin-bottom: 4px;">{{ client['name'] }}</h2>
+        <span class="badge badge-gold">{{ client['program'] or 'No Program' }}</span>
+    </div>
+    <form method="POST" action="{{ url_for('delete_client', client_id=client['id']) }}"
+          onsubmit="return confirm('Delete this client and all records?');">
+        <button type="submit" class="btn btn-red btn-sm">Delete Client</button>
+    </form>
+</div>
+
+<!-- Stats Row -->
+<div class="grid-3" style="grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 20px;">
+    <div class="stat-box">
+        <div class="value">{{ client['weight'] or '-' }}</div>
+        <div class="label">Weight (kg)</div>
+    </div>
+    <div class="stat-box">
+        <div class="value">{{ client['height'] or '-' }}</div>
+        <div class="label">Height (cm)</div>
+    </div>
+    <div class="stat-box">
+        <div class="value">{{ client['calories'] or '-' }}</div>
+        <div class="label">Daily Calories</div>
+    </div>
+    <div class="stat-box">
+        <div class="value">{{ bmi or '-' }}</div>
+        <div class="label">BMI ({{ bmi_category or '-' }})</div>
+    </div>
+    <div class="stat-box">
+        <div class="value">{{ avg_adherence }}%</div>
+        <div class="label">Avg Adherence</div>
+    </div>
+    <div class="stat-box">
+        <div class="value">{{ client['age'] or '-' }}</div>
+        <div class="label">Age</div>
+    </div>
+</div>
+
+<div class="grid-2">
+    <!-- Left Column -->
+    <div>
+        <!-- Edit Client -->
+        <div class="card">
+            <h3>Edit Client Details</h3>
+            <form method="POST" action="{{ url_for('edit_client', client_id=client['id']) }}">
+                <div class="grid-2">
+                    <div>
+                        <label>Age</label>
+                        <input type="number" name="age" value="{{ client['age'] or '' }}">
+                    </div>
+                    <div>
+                        <label>Height (cm)</label>
+                        <input type="number" name="height" step="0.1" value="{{ client['height'] or '' }}">
+                    </div>
+                    <div>
+                        <label>Weight (kg)</label>
+                        <input type="number" name="weight" step="0.1" value="{{ client['weight'] or '' }}">
+                    </div>
+                    <div>
+                        <label>Program</label>
+                        <select name="program">
+                            {% for pname in programs %}
+                            <option value="{{ pname }}" {% if client['program'] == pname %}selected{% endif %}>{{ pname }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label>Target Weight (kg)</label>
+                        <input type="number" name="target_weight" step="0.1" value="{{ client['target_weight'] or '' }}">
+                    </div>
+                    <div>
+                        <label>Target Adherence (%)</label>
+                        <input type="number" name="target_adherence" min="0" max="100" value="{{ client['target_adherence'] or '' }}">
+                    </div>
+                </div>
+                <br>
+                <button type="submit" class="btn btn-gold btn-sm">Save Changes</button>
+            </form>
+        </div>
+
+        <!-- Program Info -->
+        {% if program_info %}
+        <div class="card">
+            <h3>Workout Plan</h3>
+            <pre style="color: #2ecc71; white-space: pre-wrap; font-size: 0.9rem;">{{ program_info.get('workout', 'N/A') }}</pre>
+            <h3 style="margin-top: 16px;">Nutrition Plan</h3>
+            <pre style="color: #3498db; white-space: pre-wrap; font-size: 0.9rem;">{{ program_info.get('diet', 'N/A') }}</pre>
+        </div>
+        {% endif %}
+
+        <!-- Log Workout -->
+        <div class="card">
+            <h3>Log Workout</h3>
+            <form method="POST" action="{{ url_for('add_workout', client_id=client['id']) }}">
+                <div class="grid-2">
+                    <div>
+                        <label>Date</label>
+                        <input type="date" name="date" value="{{ today if today else '' }}">
+                    </div>
+                    <div>
+                        <label>Type</label>
+                        <select name="workout_type">
+                            <option value="Strength">Strength</option>
+                            <option value="Hypertrophy">Hypertrophy</option>
+                            <option value="Conditioning">Conditioning</option>
+                            <option value="Mixed">Mixed</option>
+                            <option value="Mobility">Mobility</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>Duration (min)</label>
+                        <input type="number" name="duration" value="60">
+                    </div>
+                </div>
+                <label>Notes</label>
+                <textarea name="notes" rows="2" placeholder="Workout notes..."></textarea>
+                <br><br>
+                <button type="submit" class="btn btn-green btn-sm">Log Workout</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Right Column -->
+    <div>
+        <!-- Log Progress -->
+        <div class="card">
+            <h3>Log Weekly Adherence</h3>
+            <form method="POST" action="{{ url_for('add_progress', client_id=client['id']) }}">
+                <div class="grid-2">
+                    <div>
+                        <label>Week</label>
+                        <input type="text" name="week" placeholder="e.g. Week 10 - 2026">
+                    </div>
+                    <div>
+                        <label>Adherence (%)</label>
+                        <input type="number" name="adherence" min="0" max="100" placeholder="85">
+                    </div>
+                </div>
+                <br>
+                <button type="submit" class="btn btn-gold btn-sm">Log Progress</button>
+            </form>
+        </div>
+
+        <!-- Log Metrics -->
+        <div class="card">
+            <h3>Log Body Metrics</h3>
+            <form method="POST" action="{{ url_for('add_metrics', client_id=client['id']) }}">
+                <div class="grid-2">
+                    <div>
+                        <label>Date</label>
+                        <input type="date" name="date">
+                    </div>
+                    <div>
+                        <label>Weight (kg)</label>
+                        <input type="number" name="weight" step="0.1" placeholder="{{ client['weight'] or '' }}">
+                    </div>
+                    <div>
+                        <label>Waist (cm)</label>
+                        <input type="number" name="waist" step="0.1">
+                    </div>
+                    <div>
+                        <label>Bodyfat (%)</label>
+                        <input type="number" name="bodyfat" step="0.1">
+                    </div>
+                </div>
+                <br>
+                <button type="submit" class="btn btn-blue btn-sm">Log Metrics</button>
+            </form>
+        </div>
+
+        <!-- Progress History -->
+        <div class="card">
+            <h3>Adherence History</h3>
+            {% if progress %}
+            <table>
+                <thead><tr><th>Week</th><th>Adherence</th></tr></thead>
+                <tbody>
+                    {% for p in progress %}
+                    <tr>
+                        <td>{{ p['week'] }}</td>
+                        <td>
+                            <span class="badge {% if p['adherence'] >= 80 %}badge-green{% elif p['adherence'] >= 50 %}badge-gold{% else %}badge-red{% endif %}">
+                                {{ p['adherence'] }}%
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p style="color: #888;">No progress data yet.</p>
+            {% endif %}
+        </div>
+
+        <!-- Workout History -->
+        <div class="card">
+            <h3>Recent Workouts</h3>
+            {% if workouts %}
+            <table>
+                <thead><tr><th>Date</th><th>Type</th><th>Duration</th><th>Notes</th></tr></thead>
+                <tbody>
+                    {% for w in workouts %}
+                    <tr>
+                        <td>{{ w['date'] }}</td>
+                        <td><span class="badge badge-blue">{{ w['workout_type'] }}</span></td>
+                        <td>{{ w['duration_min'] }} min</td>
+                        <td>{{ w['notes'] or '-' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p style="color: #888;">No workouts logged yet.</p>
+            {% endif %}
+        </div>
+
+        <!-- Metrics History -->
+        <div class="card">
+            <h3>Body Metrics History</h3>
+            {% if metrics %}
+            <table>
+                <thead><tr><th>Date</th><th>Weight</th><th>Waist</th><th>Bodyfat</th></tr></thead>
+                <tbody>
+                    {% for m in metrics %}
+                    <tr>
+                        <td>{{ m['date'] }}</td>
+                        <td>{{ m['weight'] or '-' }} kg</td>
+                        <td>{{ m['waist'] or '-' }} cm</td>
+                        <td>{{ m['bodyfat'] or '-' }}%</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p style="color: #888;">No metrics logged yet.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{% endblock %}
