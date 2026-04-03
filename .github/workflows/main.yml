@@ -2,9 +2,9 @@ name: ACEest CI/CD Pipeline
 
 on:
   push:
-    branches: [ main, develop, "feature/*" ]
+    branches: [ main, master, develop, "feature/*" ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, master ]
 
 jobs:
 
@@ -29,9 +29,7 @@ jobs:
 
       - name: Lint with flake8
         run: |
-          # Stop the build if there are Python syntax errors or undefined names
           flake8 app.py --count --select=E9,F63,F7,F82 --show-source --statistics
-          # Treat all other warnings as non-fatal for now
           flake8 app.py --count --max-line-length=120 --statistics --exit-zero
 
   # Stage 2: Run Tests
@@ -54,9 +52,9 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run Pytest suite
+      - name: Run Pytest
         run: |
-          pytest tests/ -v --tb=short
+          pytest tests/ -v --tb=short --junitxml=test-results.xml
 
   # Stage 3: Docker Image Assembly
   docker-build:
