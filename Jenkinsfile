@@ -1,9 +1,15 @@
 pipeline {
     agent any
 
+    triggers {
+        pollSCM('H/2 * * * *')
+    }
+
     environment {
         APP_NAME    = 'aceest-fitness-gym'
-        PYTHON_VER  = '3.12'
+        IMAGE_TAG   = "${APP_NAME}:${BUILD_NUMBER}"
+        TAR_NAME    = "aceest-fitness-gym-build-${BUILD_NUMBER}.tar"
+        SCANNER_HOME = tool 'SonarQubeScanner'
     }
 
     stages {
@@ -15,45 +21,54 @@ pipeline {
             }
         }
 
-        stage('Setup Environment') {
+        stage('SonarQube Analysis') {
             steps {
-                echo 'Installing Python dependencies...'
-                sh '''
-                    python3 -m pip install --upgrade pip
-                    pip3 install -r requirements.txt
-                '''
-            }
-        }
-
-        stage('Lint') {
-            steps {
-                echo 'Running flake8 linter...'
-                sh '''
-                    flake8 app.py --count --select=E9,F63,F7,F82 --show-source --statistics
-                    flake8 app.py --count --max-line-length=120 --statistics --exit-zero
-                '''
-            }
-        }
-
-        stage('Test') {
-            steps {
-                echo 'Running Pytest suite...'
-                sh 'pytest tests/ -v --tb=short'
+                echo 'Running SonarQube code analysis...'
+                withSonarQubeEnv('SonarQube') {
+                    sh """
+                        ${SCANNER_HOME}/bin/sonar-scanner \
+                        -Dsonar.projectKey=${APP_NAME} \
+                        -Dsonar.projectName='ACEest Fitness & Gym' \
+                        -Dsonar.sources=. \
+                        -Dsonar.inclusions=app.py \
+                        -Dsonar.tests=tests \
+                        -Dsonar.test.inclusions=tests/test_app.py \
+                        -Dsonar.language=python \
+                        -Dsonar.python.version=3.12 \
+                        -Dsonar.login=\${SONAR_AUTH_TOKEN}
+                    """
+                }
             }
         }
 
         stage('Docker Build') {
             steps {
                 echo 'Building Docker image...'
-                sh "docker build -t ${APP_NAME}:${BUILD_NUMBER} ."
+                sh "docker build -t ${IMAGE_TAG} ."
+                sh "docker tag ${IMAGE_TAG} ${APP_NAME}:latest"
             }
         }
 
-        stage('Docker Verify') {
+        stage('Lint') {
             steps {
-                echo 'Verifying Docker image...'
-                sh "docker images ${APP_NAME}:${BUILD_NUMBER}"
-                sh "docker run --rm ${APP_NAME}:${BUILD_NUMBER} python -m pytest tests/ -v --tb=short"
+                echo 'Running flake8 linter inside container...'
+                sh "docker run --rm ${IMAGE_TAG} flake8 app.py --count --select=E9,F63,F7,F82 --show-source --statistics"
+                sh "docker run --rm ${IMAGE_TAG} flake8 app.py --count --max-line-length=120 --statistics --exit-zero"
+            }
+        }
+
+        stage('Test') {
+            steps {
+                echo 'Running Pytest suite inside container...'
+                sh "docker run --rm ${IMAGE_TAG} python -m pytest tests/ -v --tb=short"
+            }
+        }
+
+        stage('Export Docker Image') {
+            steps {
+                echo 'Saving Docker image as downloadable artifact...'
+                sh "docker save ${IMAGE_TAG} ${APP_NAME}:latest -o ${TAR_NAME}"
+                archiveArtifacts artifacts: "${TAR_NAME}", fingerprint: true
             }
         }
     }
@@ -67,6 +82,7 @@ pipeline {
         }
         always {
             echo 'Pipeline execution complete.'
+            sh "rm -f ${TAR_NAME} || true"
         }
     }
 }
