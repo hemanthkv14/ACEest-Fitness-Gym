@@ -10,7 +10,7 @@ import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from app import app, init_db, calculate_calories, calculate_bmi, PROGRAMS, DB_NAME
+from app import app, init_db, calculate_calories, calculate_bmi, PROGRAMS  # noqa: E402
 
 
 @pytest.fixture
@@ -146,14 +146,14 @@ class TestIndexPage:
 class TestAddClient:
     def test_add_client_success(self, client):
         response = client.post("/client/add", data={
-            "name": "Ravi Kumar",
+            "name": "Hemanth Kumar",
             "age": 25,
             "height": 175,
             "weight": 70,
             "program": "Fat Loss (FL) - 3 day",
         }, follow_redirects=True)
         assert response.status_code == 200
-        assert b"Ravi Kumar" in response.data
+        assert b"Hemanth Kumar" in response.data
 
     def test_add_client_no_name(self, client):
         response = client.post("/client/add", data={
@@ -210,6 +210,15 @@ class TestEditClient:
         assert response.status_code == 200
         assert b"updated" in response.data
 
+    def test_edit_nonexistent_client(self, client):
+        response = client.post("/client/999/edit", data={
+            "age": 28,
+            "weight": 75,
+            "program": "Beginner (BG)",
+        }, follow_redirects=True)
+        assert response.status_code == 200
+        assert b"not found" in response.data
+
 
 class TestDeleteClient:
     def test_delete_client(self, client):
@@ -220,6 +229,10 @@ class TestDeleteClient:
         response = client.post("/client/1/delete", follow_redirects=True)
         assert response.status_code == 200
         assert b"deleted" in response.data
+
+    def test_delete_nonexistent_client(self, client):
+        response = client.post("/client/999/delete", follow_redirects=True)
+        assert response.status_code == 200
 
 
 class TestProgress:
@@ -234,6 +247,14 @@ class TestProgress:
         }, follow_redirects=True)
         assert response.status_code == 200
         assert b"Progress logged" in response.data
+
+    def test_add_progress_nonexistent_client(self, client):
+        response = client.post("/client/999/progress", data={
+            "week": "Week 1",
+            "adherence": 50,
+        }, follow_redirects=True)
+        assert response.status_code == 200
+        assert b"not found" in response.data
 
 
 class TestWorkout:
@@ -251,6 +272,15 @@ class TestWorkout:
         assert response.status_code == 200
         assert b"Workout logged" in response.data
 
+    def test_add_workout_nonexistent_client(self, client):
+        response = client.post("/client/999/workout", data={
+            "date": "2026-03-09",
+            "workout_type": "Cardio",
+            "duration": 30,
+        }, follow_redirects=True)
+        assert response.status_code == 200
+        assert b"not found" in response.data
+
 
 class TestMetrics:
     def test_add_metrics(self, client):
@@ -266,6 +296,14 @@ class TestMetrics:
         }, follow_redirects=True)
         assert response.status_code == 200
         assert b"Metrics logged" in response.data
+
+    def test_add_metrics_nonexistent_client(self, client):
+        response = client.post("/client/999/metrics", data={
+            "date": "2026-03-09",
+            "weight": 70,
+        }, follow_redirects=True)
+        assert response.status_code == 200
+        assert b"not found" in response.data
 
 
 class TestAPIEndpoints:
