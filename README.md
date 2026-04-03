@@ -2,7 +2,7 @@
 
 A Flask-based web application for fitness and gym client management, featuring workout programming, nutrition planning, progress tracking, and body metrics analytics.
 
-Built as part of the **Introduction to DevOps** course assignment demonstrating end-to-end CI/CD pipeline implementation with Git, Docker, GitHub Actions, and Jenkins.
+Built as part of the **Introduction to DevOps** course assignment demonstrating end-to-end CI/CD pipeline implementation with Git, Docker, GitHub Actions, Jenkins, and SonarQube.
 
 ---
 
@@ -22,14 +22,15 @@ Built as part of the **Introduction to DevOps** course assignment demonstrating 
 
 ## Tech Stack
 
-| Layer           | Technology              |
-|-----------------|-------------------------|
-| Application     | Python 3.12, Flask      |
-| Database        | SQLite                  |
-| Testing         | Pytest, flake8          |
-| Containerization| Docker                  |
-| CI/CD           | GitHub Actions, Jenkins |
-| WSGI Server     | Gunicorn                |
+| Layer            | Technology                |
+|------------------|---------------------------|
+| Application      | Python 3.12, Flask 3.1    |
+| Database         | SQLite                    |
+| Testing          | Pytest (42 tests), flake8 |
+| Containerization | Docker, Gunicorn          |
+| CI/CD            | GitHub Actions, Jenkins   |
+| Code Quality     | SonarQube 9.9             |
+| Version Control  | Git, GitHub               |
 
 ---
 
@@ -41,7 +42,9 @@ ACEest-Fitness-Gym/
 ├── requirements.txt                # Python dependencies
 ├── Dockerfile                      # Container image definition
 ├── Jenkinsfile                     # Jenkins pipeline configuration
+├── sonar-project.properties        # SonarQube scanner configuration
 ├── .dockerignore                   # Docker build exclusions
+├── .gitignore                      # Git ignored files
 ├── .github/
 │   └── workflows/
 │       └── main.yml                # GitHub Actions CI/CD pipeline
@@ -50,7 +53,8 @@ ACEest-Fitness-Gym/
 │   ├── index.html                  # Dashboard / client list page
 │   └── client_detail.html          # Individual client profile page
 ├── tests/
-│   └── test_app.py                 # Pytest test suite
+│   ├── __init__.py                 # Test package initializer
+│   └── test_app.py                 # Pytest test suite (42 tests)
 └── README.md                       # This file
 ```
 
@@ -60,7 +64,7 @@ ACEest-Fitness-Gym/
 
 ### Prerequisites
 
-- Python 3.10+ installed
+- Python 3.10+
 - pip package manager
 - Docker (optional, for containerized execution)
 
@@ -101,13 +105,13 @@ Access the app at **http://localhost:5000**.
 
 ## Running Tests
 
-### Run the full test suite locally
+### Run the full test suite
 
 ```bash
 pytest tests/ -v
 ```
 
-### Run with coverage details
+### Run with short traceback
 
 ```bash
 pytest tests/ -v --tb=short
@@ -131,37 +135,56 @@ docker run --rm aceest-fitness-gym python -m pytest tests/ -v
 
 ### GitHub Actions (`.github/workflows/main.yml`)
 
-The pipeline triggers on every `push` and `pull_request` to the `main` branch and executes three stages:
+Triggers on every `push` to `main`, `master`, `develop`, and `feature/*` branches, and on `pull_request` to `main`/`master`.
 
 ```
 push / PR → [Build & Lint] → [Automated Testing] → [Docker Image Assembly]
 ```
 
-| Stage                  | Description                                                |
-|------------------------|------------------------------------------------------------|
-| **Build & Lint**       | Installs dependencies and runs `flake8` for syntax errors  |
-| **Automated Testing**  | Executes the Pytest suite to validate application logic    |
-| **Docker Image Assembly** | Builds the Docker image and runs tests inside the container |
+| Stage                    | Description                                                |
+|--------------------------|------------------------------------------------------------|
+| **Build & Lint**         | Installs dependencies, runs `flake8` for syntax/style errors |
+| **Automated Testing**    | Executes the full Pytest suite (42 tests) with JUnit XML output |
+| **Docker Image Assembly**| Builds the Docker image and runs tests inside the container |
 
 ### Jenkins (`Jenkinsfile`)
 
-Jenkins is configured as a secondary BUILD and quality gate. The pipeline:
+Jenkins pipeline is triggered via **SCM polling** (checks for changes every 2 minutes). It uses a declarative pipeline with the following stages:
 
-1. **Checkout** — Pulls the latest code from the GitHub repository
-2. **Setup Environment** — Installs Python dependencies
-3. **Lint** — Runs flake8 for code quality checks
-4. **Test** — Executes the Pytest test suite
-5. **Docker Build** — Builds the Docker container image
-6. **Docker Verify** — Runs tests inside the built container
+```
+push → [Checkout] → [SonarQube Analysis] → [Docker Build] → [Lint] → [Test] → [Export Docker Image]
+```
 
-#### Jenkins Setup
+| Stage                  | Description                                                     |
+|------------------------|-----------------------------------------------------------------|
+| **Checkout**           | Pulls the latest code from the GitHub repository                |
+| **SonarQube Analysis** | Runs static code analysis using SonarQube Scanner               |
+| **Docker Build**       | Builds the Docker container image and tags it                   |
+| **Lint**               | Runs `flake8` linter inside the Docker container                |
+| **Test**               | Executes Pytest suite inside the Docker container               |
+| **Export Docker Image** | Saves the Docker image as a `.tar` artifact for download       |
 
-1. Install Jenkins and ensure Python 3.12+ and Docker are available on the build agent
-2. Create a new **Pipeline** project in Jenkins
-3. Under **Pipeline → Definition**, select **Pipeline script from SCM**
-4. Set SCM to **Git** and enter the repository URL
-5. Set the **Script Path** to `Jenkinsfile`
-6. Configure a webhook or poll SCM to trigger builds on push
+### Jenkins Setup Instructions
+
+1. Install Jenkins and ensure Docker is available on the build agent
+2. Add the `jenkins` user to the `docker` group: `sudo usermod -aG docker jenkins`
+3. Install the **SonarQube Scanner** plugin and configure the scanner tool as `SonarQubeScanner`
+4. Configure the SonarQube server in **Manage Jenkins → System → SonarQube servers**:
+   - **Name:** `SonarQube`
+   - **URL:** `http://localhost:9000`
+   - **Token:** Add a credential with a Global Analysis Token from SonarQube
+5. Create a new **Pipeline** project in Jenkins
+6. Under **Pipeline → Definition**, select **Pipeline script from SCM**
+7. Set SCM to **Git** and enter the repository URL
+8. Set the **Script Path** to `Jenkinsfile`
+9. The pipeline uses `pollSCM` to automatically detect and build on new commits
+
+### SonarQube Setup
+
+1. Install and run SonarQube (Community Edition 9.9+)
+2. Generate a **Global Analysis Token** in SonarQube (My Account → Security → Generate Tokens)
+3. Add the token as a **Secret text** credential in Jenkins
+4. The `sonar-project.properties` file configures the scanner with project settings
 
 ---
 
@@ -181,6 +204,25 @@ Jenkins is configured as a secondary BUILD and quality gate. The pipeline:
 | GET    | `/api/clients`              | List all clients (JSON)          |
 | GET    | `/api/client/<id>/bmi`      | Get client BMI info (JSON)       |
 | GET    | `/health`                   | Health check for CI/CD           |
+
+---
+
+## Docker Configuration
+
+- **Base image:** `python:3.12-slim`
+- **Non-root user:** Runs as `appuser` for security
+- **WSGI server:** Gunicorn with 2 workers
+- **Health check:** Built-in `HEALTHCHECK` pinging `/health` every 30s
+- **Port:** 5000
+
+### Download and run the Docker image from Jenkins
+
+```bash
+# Download the .tar artifact from Jenkins build artifacts page
+# Then load and run:
+docker load -i aceest-fitness-gym-build-<BUILD_NUMBER>.tar
+docker run -p 5000:5000 aceest-fitness-gym:latest
+```
 
 ---
 

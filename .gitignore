@@ -9,3 +9,7 @@ venv/
 dist/
 build/
 *.pdf
+.idea/
+.vscode/
+.coverage
+*.tar

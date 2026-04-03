@@ -3,6 +3,7 @@ __pycache__
 *.pyo
 .git
 .github
+.gitignore
 .pytest_cache
 *.db
 *.egg-info
@@ -10,3 +11,5 @@ __pycache__
 venv
 Jenkinsfile
 README.md
+sonar-project.properties
+.dockerignore
