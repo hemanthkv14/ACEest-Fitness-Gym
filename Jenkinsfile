@@ -27,23 +27,27 @@ pipeline {
 
         stage('Lint') {
             steps {
-                echo 'Running flake8 linter...'
+                echo 'Running flake8 linter inside python:3.12-slim container...'
                 sh '''
-                    python3 -m pip install --quiet --user flake8
-                    python3 -m flake8 app.py --count --select=E9,F63,F7,F82 --show-source --statistics
-                    python3 -m flake8 app.py --count --max-line-length=120 --statistics --exit-zero
+                    docker run --rm -v "$WORKSPACE":/app -w /app python:3.12-slim sh -c "
+                        pip install --quiet flake8 &&
+                        flake8 app.py --count --select=E9,F63,F7,F82 --show-source --statistics &&
+                        flake8 app.py --count --max-line-length=120 --statistics --exit-zero
+                    "
                 '''
             }
         }
 
         stage('Test + Coverage') {
             steps {
-                echo 'Running pytest with coverage for SonarQube...'
+                echo 'Running pytest with coverage for SonarQube inside python:3.12-slim container...'
                 sh '''
-                    python3 -m pip install --quiet --user -r requirements.txt
-                    python3 -m pytest tests/ -v --tb=short \
-                        --cov=app --cov-report=xml:coverage.xml \
-                        --junitxml=test-results.xml
+                    docker run --rm -v "$WORKSPACE":/app -w /app python:3.12-slim sh -c "
+                        pip install --quiet -r requirements.txt &&
+                        pytest tests/ -v --tb=short \
+                            --cov=app --cov-report=xml:coverage.xml \
+                            --junitxml=test-results.xml
+                    "
                 '''
             }
             post {
