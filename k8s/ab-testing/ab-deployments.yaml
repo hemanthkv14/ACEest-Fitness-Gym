@@ -1,0 +1,103 @@
+# ------------------------------------------------------------------
+# Strategy 4: A/B TESTING  (header-based routing via NGINX Ingress)
+# ------------------------------------------------------------------
+# Two ClusterIP services back two Deployments. The Ingress uses the
+# `nginx.ingress.kubernetes.io/canary-by-header` annotation so that
+# requests carrying  `X-Experiment: variant-b`  are routed to v2,
+# while everyone else continues to hit v1.
+# ------------------------------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aceest-ab-a
+  namespace: aceest
+  labels: { app: aceest-fitness-gym, strategy: ab, variant: a }
+spec:
+  replicas: 2
+  selector:
+    matchLabels: { app: aceest-fitness-gym, variant: a }
+  template:
+    metadata:
+      labels: { app: aceest-fitness-gym, strategy: ab, variant: a, version: v1 }
+    spec:
+      containers:
+        - name: aceest
+          image: DOCKERHUB_USER/aceest-fitness-gym:v1
+          ports: [{ containerPort: 5000 }]
+          env: [{ name: APP_VARIANT, value: "A" }]
+          readinessProbe:
+            httpGet: { path: /health, port: 5000 }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aceest-ab-b
+  namespace: aceest
+  labels: { app: aceest-fitness-gym, strategy: ab, variant: b }
+spec:
+  replicas: 2
+  selector:
+    matchLabels: { app: aceest-fitness-gym, variant: b }
+  template:
+    metadata:
+      labels: { app: aceest-fitness-gym, strategy: ab, variant: b, version: v2 }
+    spec:
+      containers:
+        - name: aceest
+          image: DOCKERHUB_USER/aceest-fitness-gym:v2
+          ports: [{ containerPort: 5000 }]
+          env: [{ name: APP_VARIANT, value: "B" }]
+          readinessProbe:
+            httpGet: { path: /health, port: 5000 }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: aceest-ab-a-svc, namespace: aceest }
+spec:
+  selector: { app: aceest-fitness-gym, variant: a }
+  ports: [{ port: 80, targetPort: 5000 }]
+---
+apiVersion: v1
+kind: Service
+metadata: { name: aceest-ab-b-svc, namespace: aceest }
+spec:
+  selector: { app: aceest-fitness-gym, variant: b }
+  ports: [{ port: 80, targetPort: 5000 }]
+---
+# Primary ingress -> variant A (default audience)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: aceest-ab-main
+  namespace: aceest
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: aceest.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service: { name: aceest-ab-a-svc, port: { number: 80 } }
+---
+# Overlay ingress -> variant B only when X-Experiment: variant-b is set
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: aceest-ab-experiment
+  namespace: aceest
+  annotations:
+    nginx.ingress.kubernetes.io/canary: "true"
+    nginx.ingress.kubernetes.io/canary-by-header: "X-Experiment"
+    nginx.ingress.kubernetes.io/canary-by-header-value: "variant-b"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: aceest.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service: { name: aceest-ab-b-svc, port: { number: 80 } }

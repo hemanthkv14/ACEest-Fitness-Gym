@@ -1,0 +1,35 @@
+# Primary ClusterIP service. The `version` selector label is the pivot
+# used by the Blue-Green strategy to switch live traffic between colors.
+apiVersion: v1
+kind: Service
+metadata:
+  name: aceest-svc
+  namespace: aceest
+  labels:
+    app: aceest-fitness-gym
+spec:
+  type: ClusterIP
+  selector:
+    app: aceest-fitness-gym
+    # Blue-Green: flip this label (blue <-> green) to cut traffic over.
+    version: blue
+  ports:
+    - name: http
+      port: 80
+      targetPort: 5000
+      protocol: TCP
+---
+# NodePort service used for quick Minikube access / smoke tests.
+apiVersion: v1
+kind: Service
+metadata:
+  name: aceest-svc-nodeport
+  namespace: aceest
+spec:
+  type: NodePort
+  selector:
+    app: aceest-fitness-gym
+  ports:
+    - port: 80
+      targetPort: 5000
+      nodePort: 30080

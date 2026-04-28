@@ -1,0 +1,40 @@
+# ------------------------------------------------------------------
+# Strategy 2a: BLUE-GREEN  -- BLUE (current stable)
+# ------------------------------------------------------------------
+# The aceest-svc Service selects pods with version=blue. Green runs
+# alongside at full capacity but receives zero traffic until the
+# Service selector is flipped (see README for the patch command).
+# ------------------------------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aceest-blue
+  namespace: aceest
+  labels:
+    app: aceest-fitness-gym
+    strategy: blue-green
+    version: blue
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: aceest-fitness-gym
+      version: blue
+  template:
+    metadata:
+      labels:
+        app: aceest-fitness-gym
+        strategy: blue-green
+        version: blue
+    spec:
+      containers:
+        - name: aceest
+          image: DOCKERHUB_USER/aceest-fitness-gym:v1
+          ports: [{ containerPort: 5000 }]
+          env:
+            - name: APP_VERSION
+              value: "blue-v1"
+          readinessProbe:
+            httpGet: { path: /health, port: 5000 }
+            initialDelaySeconds: 3
+            periodSeconds: 5

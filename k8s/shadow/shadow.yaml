@@ -1,0 +1,88 @@
+# ------------------------------------------------------------------
+# Strategy 5: SHADOW (traffic mirroring)
+# ------------------------------------------------------------------
+# Live traffic is served from the "primary" Deployment. A copy of every
+# inbound request is mirrored (fire-and-forget) to the "shadow"
+# Deployment so v2 can be exercised with real production load without
+# any user-visible impact.
+#
+# Mirroring requires a service mesh or mirroring-capable proxy. The
+# manifest below uses Istio's VirtualService (install Istio first:
+#   istioctl install --set profile=demo -y
+#   kubectl label namespace aceest istio-injection=enabled --overwrite
+# ).
+# ------------------------------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aceest-primary
+  namespace: aceest
+  labels: { app: aceest-fitness-gym, strategy: shadow, role: primary }
+spec:
+  replicas: 3
+  selector:
+    matchLabels: { app: aceest-fitness-gym, role: primary }
+  template:
+    metadata:
+      labels: { app: aceest-fitness-gym, strategy: shadow, role: primary, version: v1 }
+    spec:
+      containers:
+        - name: aceest
+          image: DOCKERHUB_USER/aceest-fitness-gym:v1
+          ports: [{ containerPort: 5000 }]
+          readinessProbe:
+            httpGet: { path: /health, port: 5000 }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aceest-shadow
+  namespace: aceest
+  labels: { app: aceest-fitness-gym, strategy: shadow, role: shadow }
+spec:
+  replicas: 2
+  selector:
+    matchLabels: { app: aceest-fitness-gym, role: shadow }
+  template:
+    metadata:
+      labels: { app: aceest-fitness-gym, strategy: shadow, role: shadow, version: v2 }
+    spec:
+      containers:
+        - name: aceest
+          image: DOCKERHUB_USER/aceest-fitness-gym:v2
+          ports: [{ containerPort: 5000 }]
+          env: [{ name: SHADOW, value: "true" }]
+          readinessProbe:
+            httpGet: { path: /health, port: 5000 }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: aceest-primary-svc, namespace: aceest }
+spec:
+  selector: { app: aceest-fitness-gym, role: primary }
+  ports: [{ port: 80, targetPort: 5000 }]
+---
+apiVersion: v1
+kind: Service
+metadata: { name: aceest-shadow-svc, namespace: aceest }
+spec:
+  selector: { app: aceest-fitness-gym, role: shadow }
+  ports: [{ port: 80, targetPort: 5000 }]
+---
+# Istio VirtualService: 100% of traffic to primary, mirrored 100% to shadow.
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: aceest-shadow-vs
+  namespace: aceest
+spec:
+  hosts: ["aceest-primary-svc"]
+  http:
+    - route:
+        - destination:
+            host: aceest-primary-svc
+          weight: 100
+      mirror:
+        host: aceest-shadow-svc
+      mirrorPercentage:
+        value: 100.0
