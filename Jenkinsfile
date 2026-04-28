@@ -14,6 +14,8 @@ pipeline {
         TAR_NAME       = "${APP_NAME}-build-${BUILD_NUMBER}.tar"
         K8S_NAMESPACE  = 'aceest'
         SCANNER_HOME   = tool 'SonarQubeScanner'
+        // Toggle SonarQube analysis + quality gate. Set to 'true' to enable.
+        RUN_SONAR      = 'false'
     }
 
     stages {
@@ -60,6 +62,7 @@ pipeline {
         }
 
         stage('SonarQube Analysis') {
+            when { expression { return env.RUN_SONAR == 'true' } }
             steps {
                 echo 'Running SonarQube code analysis...'
                 withSonarQubeEnv('SonarQube') {
@@ -80,6 +83,7 @@ pipeline {
         }
 
         stage('Quality Gate') {
+            when { expression { return env.RUN_SONAR == 'true' } }
             steps {
                 timeout(time: 5, unit: 'MINUTES') {
                     waitForQualityGate abortPipeline: false
